@@ -1,6 +1,6 @@
 ---
-title: "title"
-author: "author"
+title: "DAP II Problem Set 5"
+author: Sara Van Valkenburgh and Jennifer Edouard
 date: "date"
 format: 
   pdf:
@@ -26,10 +26,10 @@ output:
 ## Submission Steps (10 pts)
 1. This problem set is a paired problem set.
 2. Play paper, scissors, rock to determine who goes first. Call that person *Partner 1*.
-    - Partner 1 (name and cnet ID):
-    - Partner 2 (name and cnet ID):
+    - Partner 1 (name and cnet ID): Sara Van Valkenburgh, vanvals
+    - Partner 2 (name and cnet ID): Jennifer Edouard, jkedouard
 3. Partner 1 will accept the `ps5` and then share the link it creates with their partner. You can only share it with one partner so you will not be able to change it after your partner has accepted. 
-4. "This submission is our work alone and complies with the 30538 integrity policy." Add your initials to indicate your agreement: \*\*\_\_\*\* \*\*\_\_\*\*
+4. "This submission is our work alone and complies with the 30538 integrity policy." Add your initials to indicate your agreement: \*\*sv\*\* \*\*je\*\*
 5. "I have uploaded the names of anyone else other than my partner and I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  (1 point)
 6. Late coins used this pset: \*\*\_\_\*\* Late coins left after submission: \*\*\_\_\*\*
 7. Knit your `ps5.qmd` to an PDF file to make `ps5.pdf`, 
@@ -44,6 +44,8 @@ output:
 import pandas as pd
 import altair as alt
 import time
+import requests
+from bs4 import BeautifulSoup
 
 import warnings 
 warnings.filterwarnings('ignore')
@@ -56,10 +58,68 @@ alt.renderers.enable("png")
 ### 1. Scraping (PARTNER 1)
 
 ```{python}
+url = 'https://oig.hhs.gov/fraud/enforcement/'
+response = requests.get(url)
 
+soup = BeautifulSoup(response.text, 'lxml')
 ```
 
-  
+```{python}
+# Empty lists to store the information
+titles = []
+dates = []
+categories = []
+links = []
+```
+
+```{python}
+# Title of the enforcement action
+for heading in soup.find_all('h2', class_='usa-card__heading'):
+    title = heading.find('a').get_text(strip=True)
+    titles.append(title)
+```
+
+```{python}
+# Date
+for date_tag in soup.find_all('span', class_='text-base-dark padding-right-105'):
+    date = date_tag.get_text(strip=True)
+    dates.append(date)
+```
+
+```{python}
+# Category
+for ul in soup.find_all('ul', class_='display-inline add-list-reset'):
+    for li in ul.find_all('li'):
+        category = li.get_text(strip=True)
+        categories.append(category)
+```
+
+```{python}
+# Link associated with enforcement action
+for action in soup.find_all('a', href=True):
+    href = action['href']
+    
+    if href.startswith("/fraud/enforcement/"):
+        
+        full_link = f"https://oig.hhs.gov{href}"
+        links.append(full_link)
+
+# Remove the first three links; they are irrelevant 
+links = links[3:] 
+```
+
+ ```{python}
+# Put into a dataframe
+ data = {
+    'Title': titles,
+    'Date': dates,
+    'Category': categories,
+    'Link': links
+}
+df = pd.DataFrame(data)
+df.head()
+ ``` 
+
 ### 2. Crawling (PARTNER 1)
 
 ```{python}
