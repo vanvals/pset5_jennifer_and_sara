@@ -1,7 +1,10 @@
 ---
 title: "DAP II Problem Set 5"
 author: Sara Van Valkenburgh and Jennifer Edouard
-date: "date"
+date: November 9, 2025
+geometry: 
+    margin=0.75in
+fontsize: 10pt
 format: 
   pdf:
     include-in-header: 
@@ -61,7 +64,7 @@ alt.renderers.enable("png")
 url = 'https://oig.hhs.gov/fraud/enforcement/'
 response = requests.get(url)
 
-soup = BeautifulSoup(response.text, 'lxml')
+soup = BeautifulSoup(response.text, 'html.parser')
 ```
 
 ```{python}
@@ -98,23 +101,21 @@ for ul in soup.find_all('ul', class_='display-inline add-list-reset'):
 # Link associated with enforcement action
 for action in soup.find_all('a', href=True):
     href = action['href']
-    
     if href.startswith("/fraud/enforcement/"):
-        
         full_link = f"https://oig.hhs.gov{href}"
         links.append(full_link)
 
-# Remove the first three links; they are irrelevant 
+# Remove the first three links; they are irrelevant
 links = links[3:] 
 ```
 
  ```{python}
 # Put into a dataframe
  data = {
-    'Title': titles,
-    'Date': dates,
-    'Category': categories,
-    'Link': links
+     'Title': titles,
+     'Date': dates,
+     'Category': categories,
+     'Link': links
 }
 df = pd.DataFrame(data)
 df.head()
@@ -123,8 +124,37 @@ df.head()
 ### 2. Crawling (PARTNER 1)
 
 ```{python}
+def get_agency_name(url):
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
 
+    agency_name = "N/A"
+    agency_label = soup.find(
+        'span', class_='padding-right-2 text-base', string="Agency:")
+
+    if agency_label and agency_label.next_sibling:
+        agency_name = agency_label.next_sibling.get_text(strip=True)
+
+    return agency_name
 ```
+
+```{python}
+data = {
+    'Title': titles,
+    'Date': dates,
+    'Category': categories,
+    'Link': links
+}
+df = pd.DataFrame(data)
+df['Agency'] = None
+
+for idx, link in enumerate(df['Link']):
+    df.at[idx, 'Agency'] = get_agency_name(link)
+
+df.head()
+```
+
+Source: https://stackoverflow.com/questions/16476924/how-can-i-iterate-over-rows-in-a-pandas-dataframe
 
 ## Step 2: Making the scraper dynamic
 
