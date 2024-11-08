@@ -162,11 +162,99 @@ Source: https://stackoverflow.com/questions/16476924/how-can-i-iterate-over-rows
 
 * a. Pseudo-Code (PARTNER 2)
 
+```{python}
+
+from datetime import datetime
+
+def scrape_enforcement_actions(year, month):
+    # make it restart if a year lower than 2013 is entered
+    if year < 2013:
+        print("Please enter a year greater than or equal to 2013.")
+        return
+
+    # same url opening for all the pages scraped
+    base_url = "https://oig.hhs.gov/fraud/enforcement/"
+    all_actions = pd.DataFrame()
+
+    # making sure it stops at today's date (it might do that already bc there's no data past today...)
+    start_date = datetime(year, month, 1)
+    current_date = datetime.now()
+    
+    # establishing the pages so it can go on from there
+    page_num = 1
+
+    # this just uses the code that Partner 1 wrote, but making it crawl through all the pages
+    while True:
+        page_url = f"{base_url}?page={page_num}"
+        print(f"Scraping page: {page_url}")
+        
+        response = requests.get(page_url)
+        soup = BeautifulSoup(response.text, "html.parser")
+        
+        titles = [heading.find('a').get_text(strip=True) 
+                  for heading in soup.find_all('h2', class_='usa-card__heading')]
+        
+        date_texts = [date_tag.get_text(strip=True) 
+                      for date_tag in soup.find_all('span', class_='text-base-dark padding-right-105')]
+        dates = []
+        for date_text in date_texts:
+            try:
+                # Parse the date, handling potential issues with date format
+                date = datetime.strptime(date_text, "%B %d, %Y")
+                dates.append(date)
+            except ValueError:
+                print(f"Error parsing date: {date_text}")
+                dates.append(None)
+
+        categories = [li.get_text(strip=True) 
+                      for ul in soup.find_all('ul', class_='display-inline add-list-reset') 
+                      for li in ul.find_all('li')]
+
+        links = [f"https://oig.hhs.gov{a['href']}" 
+                 for a in soup.find_all('a', href=True) 
+                 if a['href'].startswith("/fraud/enforcement/")]
+
+        # filter based on start and end dates
+        filtered_actions = {
+            "Title": [],
+            "Date": [],
+            "Category": [],
+            "Link": []
+        }
+        for i in range(len(dates)):
+            # check if the date is valid and within the desired range
+            if dates[i] and start_date <= dates[i] <= current_date:
+                filtered_actions["Title"].append(titles[i])
+                filtered_actions["Date"].append(dates[i].strftime("%Y-%m-%d"))
+                filtered_actions["Category"].append(categories[i])
+                filtered_actions["Link"].append(links[i])
+        
+        # add filtered actions to the DataFrame
+        page_df = pd.DataFrame(filtered_actions)
+        all_actions = pd.concat([all_actions, page_df], ignore_index=True)
+        
+        # wait before moving to the next page
+        time.sleep(1)
+        
+        # check for the next page
+        next_button = soup.find('a', {'class': 'pagination-next'})
+        if next_button:
+            page_num += 1
+        else:
+            break
+
+    # save results to CSV
+    file_name = f"enforcement_actions_{year}_{month:02d}.csv"
+    all_actions.to_csv(file_name, index=False)
+    print(f"Data saved to {file_name}")
+
+```
 
 * b. Create Dynamic Scraper (PARTNER 2)
 
 ```{python}
-
+# Testing it for January 2023
+scrape_enforcement_actions(2023, 1)
 ```
 
 * c. Test Partner's Code (PARTNER 1)
