@@ -1,0 +1,823 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "title: \"DAP II Problem Set 5\"\n",
+        "author: Sara Van Valkenburgh and Jennifer Edouard\n",
+        "date: November 9, 2025\n",
+        "geometry: \n",
+        "    margin=0.75in\n",
+        "fontsize: 10pt\n",
+        "format: \n",
+        "  pdf:\n",
+        "    include-in-header: \n",
+        "       text: |\n",
+        "         \\usepackage{fvextra}\n",
+        "         \\DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\\\\{\\}}\n",
+        "include-before-body:\n",
+        "  text: |\n",
+        "    \\RecustomVerbatimEnvironment{verbatim}{Verbatim}{\n",
+        "      showspaces = false,\n",
+        "      showtabs = false,\n",
+        "      breaksymbolleft={},\n",
+        "      breaklines\n",
+        "    }\n",
+        "output:\n",
+        "  echo: false\n",
+        "  eval: false\n",
+        "---\n",
+        "\n",
+        "\n",
+        "**Due 11/9 at 5:00PM Central. Worth 100 points + 10 points extra credit.**\n",
+        "\n",
+        "## Submission Steps (10 pts)\n",
+        "1. This problem set is a paired problem set.\n",
+        "2. Play paper, scissors, rock to determine who goes first. Call that person *Partner 1*.\n",
+        "    - Partner 1 (name and cnet ID): Sara Van Valkenburgh, vanvals\n",
+        "    - Partner 2 (name and cnet ID): Jennifer Edouard, jkedouard\n",
+        "3. Partner 1 will accept the `ps5` and then share the link it creates with their partner. You can only share it with one partner so you will not be able to change it after your partner has accepted. \n",
+        "4. \"This submission is our work alone and complies with the 30538 integrity policy.\" Add your initials to indicate your agreement: \\*\\*sv\\*\\* \\*\\*je\\*\\*\n",
+        "5. \"I have uploaded the names of anyone else other than my partner and I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**\"  (1 point)\n",
+        "6. Late coins used this pset: \\*\\*\\_\\_\\*\\* Late coins left after submission: \\*\\*\\_\\_\\*\\*\n",
+        "7. Knit your `ps5.qmd` to an PDF file to make `ps5.pdf`, \n",
+        "    * The PDF should not be more than 25 pages. Use `head()` and re-size figures when appropriate. \n",
+        "8. (Partner 1): push  `ps5.qmd` and `ps5.pdf` to your github repo.\n",
+        "9. (Partner 1): submit `ps5.pdf` via Gradescope. Add your partner on Gradescope.\n",
+        "10. (Partner 1): tag your submission in Gradescope\n",
+        "\n",
+        "\\newpage\n"
+      ],
+      "id": "5aa7191a"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "import pandas as pd\n",
+        "import altair as alt\n",
+        "import time\n",
+        "import requests\n",
+        "from bs4 import BeautifulSoup\n",
+        "\n",
+        "import warnings \n",
+        "warnings.filterwarnings('ignore')\n",
+        "alt.renderers.enable(\"png\")"
+      ],
+      "id": "b0823736",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Step 1: Develop initial scraper and crawler\n",
+        "\n",
+        "### 1. Scraping (PARTNER 1)\n"
+      ],
+      "id": "e28cdac3"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "url = 'https://oig.hhs.gov/fraud/enforcement/'\n",
+        "response = requests.get(url)\n",
+        "\n",
+        "soup = BeautifulSoup(response.text, 'html.parser')"
+      ],
+      "id": "32764f60",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Empty lists to store the information\n",
+        "titles = []\n",
+        "dates = []\n",
+        "categories = []\n",
+        "links = []"
+      ],
+      "id": "36d9bfb6",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Title of the enforcement action\n",
+        "for heading in soup.find_all('h2', class_='usa-card__heading'):\n",
+        "    title = heading.find('a').get_text(strip=True)\n",
+        "    titles.append(title)"
+      ],
+      "id": "867c3978",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Date\n",
+        "for date_tag in soup.find_all('span', class_='text-base-dark padding-right-105'):\n",
+        "    date = date_tag.get_text(strip=True)\n",
+        "    dates.append(date)"
+      ],
+      "id": "a4891e20",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Category\n",
+        "for ul in soup.find_all('ul', class_='display-inline add-list-reset'):\n",
+        "    for li in ul.find_all('li'):\n",
+        "        category = li.get_text(strip=True)\n",
+        "        categories.append(category)"
+      ],
+      "id": "3e6beb1f",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Link associated with enforcement action\n",
+        "for action in soup.find_all('a', href=True):\n",
+        "    href = action['href']\n",
+        "    if href.startswith(\"/fraud/enforcement/\"):\n",
+        "        full_link = f\"https://oig.hhs.gov{href}\"\n",
+        "        links.append(full_link)\n",
+        "\n",
+        "# Remove the first three links; they are irrelevant\n",
+        "links = links[3:] "
+      ],
+      "id": "0f663efd",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "md-indent": " "
+      },
+      "source": [
+        "#Put into a dataframe\n",
+        "data = {\n",
+        "    'Title': titles,\n",
+        "    'Date': dates,\n",
+        "    'Category': categories,\n",
+        "    'Link': links\n",
+        "}\n",
+        "df= pd.DataFrame(data)\n",
+        "df.head()"
+      ],
+      "id": "2a2b1a81",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 2. Crawling (PARTNER 1)\n"
+      ],
+      "id": "acf74e80"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "def get_agency_name(url):\n",
+        "    response = requests.get(url)\n",
+        "    soup = BeautifulSoup(response.text, 'html.parser')\n",
+        "\n",
+        "    agency_name = \"N/A\"\n",
+        "    agency_label = soup.find(\n",
+        "        'span', class_='padding-right-2 text-base', string=\"Agency:\")\n",
+        "\n",
+        "    if agency_label and agency_label.next_sibling:\n",
+        "        agency_name = agency_label.next_sibling.get_text(strip=True)\n",
+        "\n",
+        "    return agency_name"
+      ],
+      "id": "fc836178",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "data = {\n",
+        "    'Title': titles,\n",
+        "    'Date': dates,\n",
+        "    'Category': categories,\n",
+        "    'Link': links\n",
+        "}\n",
+        "df = pd.DataFrame(data)\n",
+        "df['Agency'] = None\n",
+        "\n",
+        "for idx, link in enumerate(df['Link']):\n",
+        "    df.at[idx, 'Agency'] = get_agency_name(link)\n",
+        "\n",
+        "df.head()"
+      ],
+      "id": "0640980a",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Source: https://stackoverflow.com/questions/16476924/how-can-i-iterate-over-rows-in-a-pandas-dataframe\n",
+        "\n",
+        "## Step 2: Making the scraper dynamic\n",
+        "\n",
+        "### 1. Turning the scraper into a function \n",
+        "\n",
+        "* a. Pseudo-Code (PARTNER 2)\n",
+        "\n",
+        "Define function \n",
+        "    - If the input year is less than 2013:\n",
+        "        - Display message: \"Please enter a year greater than or equal to 2013.\"\n",
+        "        - Exit \n",
+        "\n",
+        "    - Set the base URL for enforcement actions\n",
+        "    - Create an empty DataFrame to store all actions data\n",
+        "\n",
+        "    - Define the start date \n",
+        "    - Define the current date as today's date \n",
+        "\n",
+        "    - Set the initial page number to 1\n",
+        "\n",
+        "    - Begin loop to scrape each page\n",
+        "        - URL for the current page\n",
+        "        - Parse page content with BeautifulSoup\n",
+        "        \n",
+        "        - Extract titles\n",
+        "        - Extract dates\n",
+        "            - Convert each date text to a datetime object\n",
+        "\t    - Extract categories\n",
+        "        - Extract links\n",
+        "        - Extract agencies\n",
+        "\n",
+        "        - Create empty dictionary to store information\n",
+        "\n",
+        "        - Loop through each date:\n",
+        "            - If the date is valid:\n",
+        "                - If the date is before the start date,  break the loop\n",
+        "                - If the date is within the range (start_date to current_date), append the title, formatted date, category, and link \n",
+        "\n",
+        "\t    - Put into a DataFrame\n",
+        "        - Pause for 1 second to avoid overloading the server\n",
+        "        - Check if a \"next\" page link exists:\n",
+        "            - If yes, increment the page number and continue to the next page\n",
+        "            - If not, exit the loop\n",
+        "\n",
+        "    - Once scraping is complete, save the DataFrame to a CSV file\n",
+        "\n",
+        "* b. Create Dynamic Scraper (PARTNER 2)"
+      ],
+      "id": "fbddc063"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "from datetime import datetime\n",
+        "\n",
+        "\n",
+        "def scrape_enforcement_actions(year, month):\n",
+        "    # make it restart if a year lower than 2013 is entered\n",
+        "    if year < 2013:\n",
+        "        print(\"Please enter a year greater than or equal to 2013.\")\n",
+        "        return\n",
+        "\n",
+        "    # same url opening for all the pages scraped\n",
+        "    base_url = \"https://oig.hhs.gov/fraud/enforcement/\"\n",
+        "    all_actions = pd.DataFrame()\n",
+        "\n",
+        "    # making sure it stops at today's date (it might do that already bc there's no data past today...)\n",
+        "    start_date = datetime(year, month, 1)\n",
+        "    current_date = datetime.now()\n",
+        "\n",
+        "    # establishing the pages so it can go on from there\n",
+        "    page_num = 1\n",
+        "\n",
+        "    stop_scraping = False\n",
+        "\n",
+        "    # this just uses the code that Partner 1 wrote, but making it crawl through all the pages\n",
+        "    while not stop_scraping:\n",
+        "        page_url = f\"{base_url}?page={page_num}\"\n",
+        "        print(f\"Scraping page: {page_url}\")\n",
+        "\n",
+        "        response = requests.get(page_url)\n",
+        "        soup = BeautifulSoup(response.text, \"html.parser\")\n",
+        "\n",
+        "        titles = [heading.find('a').get_text(strip=True)\n",
+        "                  for heading in soup.find_all('h2', class_='usa-card__heading')]\n",
+        "\n",
+        "        date_texts = [date_tag.get_text(strip=True)\n",
+        "                      for date_tag in soup.find_all('span', class_='text-base-dark padding-right-105')]\n",
+        "        dates = []\n",
+        "        for date_text in date_texts:\n",
+        "            try:\n",
+        "                date = datetime.strptime(date_text, \"%B %d, %Y\")\n",
+        "                dates.append(date)\n",
+        "                # Check if date is before start_date and set stop_scraping if it is\n",
+        "                if date < start_date:\n",
+        "                    stop_scraping = True\n",
+        "                    break\n",
+        "            except ValueError:\n",
+        "                print(f\"Error parsing date: {date_text}\")\n",
+        "                dates.append(None)\n",
+        "\n",
+        "        if stop_scraping:\n",
+        "            break\n",
+        "\n",
+        "        categories = [li.get_text(strip=True)\n",
+        "                      for ul in soup.find_all('ul', class_='display-inline add-list-reset')\n",
+        "                      for li in ul.find_all('li')]\n",
+        "\n",
+        "        links = [f\"https://oig.hhs.gov{a['href']}\"\n",
+        "                 for a in soup.find_all('a', href=True)\n",
+        "                 if a['href'].startswith(\"/fraud/enforcement/\")][3:]\n",
+        "\n",
+        "        # filter based on start and end dates\n",
+        "        filtered_actions = {\n",
+        "            \"Title\": [],\n",
+        "            \"Date\": [],\n",
+        "            \"Category\": [],\n",
+        "            \"Link\": [],\n",
+        "            \"Agency\": []\n",
+        "        }\n",
+        "        for i in range(len(dates)):\n",
+        "              if dates[i]:\n",
+        "                    if dates[i] < start_date:\n",
+        "                        stop_scraping = True\n",
+        "                        break\n",
+        "                    if start_date <= dates[i] <= current_date:\n",
+        "                        filtered_actions[\"Title\"].append(titles[i])\n",
+        "                        filtered_actions[\"Date\"].append(\n",
+        "                            dates[i].strftime(\"%Y-%m-%d\"))\n",
+        "                        filtered_actions[\"Category\"].append(categories[i])\n",
+        "                        filtered_actions[\"Link\"].append(links[i])\n",
+        "                        agency_name = get_agency_name(links[i])\n",
+        "                        filtered_actions[\"Agency\"].append(agency_name)\n",
+        "\n",
+        "        # add filtered actions to the DataFrame\n",
+        "        page_df = pd.DataFrame(filtered_actions)\n",
+        "        all_actions = pd.concat([all_actions, page_df], ignore_index=True)\n",
+        "\n",
+        "        # wait before moving to the next page\n",
+        "        time.sleep(1)\n",
+        "\n",
+        "        # check for the next page\n",
+        "        next_button = soup.find('a', {'class': 'pagination-next'})\n",
+        "        if next_button:\n",
+        "            page_num += 1\n",
+        "        else:\n",
+        "            break\n",
+        "\n",
+        "    # save results to CSV\n",
+        "    file_name = f\"enforcement_actions_{year}_{month:02d}.csv\"\n",
+        "    all_actions.to_csv(file_name, index=False)\n",
+        "    print(f\"Data saved to {file_name}\")"
+      ],
+      "id": "5dfc047b",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Testing it for January 2023\n",
+        "scrape_enforcement_actions(2023, 1)"
+      ],
+      "id": "8cd1653c",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "df2023 = pd.read_csv(\"data/enforcement_actions_2023_01.csv\")\n",
+        "len(df2023)"
+      ],
+      "id": "28f9e2fe",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Number of enforcement actions in final data frame: 1510\n",
+        "\n",
+        "Date and details of the earliest enforcement action scraped: Podiatrist Pays $90,000 To Settle False Billing Allegations, 2023-01-03, Criminal and Civil Actions, https://oig.hhs.gov/fraud/enforcement/podiatrist-pays-90000-to-settle-false-billing-allegations/, U.S. Attorney’s Office, Southern District of Texas\n",
+        "\n",
+        "* c. Test Partner's Code (PARTNER 1)\n"
+      ],
+      "id": "1cab9b09"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Testing for January 2021\n",
+        "scrape_enforcement_actions(2021, 1)"
+      ],
+      "id": "eacbef54",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "df2021 = pd.read_csv(\"data/enforcement_actions_2021_01.csv\")\n",
+        "len(df2021)"
+      ],
+      "id": "44eb5ad3",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Number of enforcement actions in final data frame: 3016\n",
+        "\n",
+        "Date and details of the earliest enforcement action scraped: The United States And Tennessee Resolve Claims With Three Providers For False Claims Act Liability Relating To ‘P-Stim’ Devices For A Total Of $1.72 Million, 2021-01-04, Criminal and Civil Actions, https://oig.hhs.gov/fraud/enforcement/the-united-states-and-tennessee-resolve-claims-with-three-providers-for-false-claims-act-liability-relating-to-p-stim-devices-for-a-total-of-172-million/, U.S. Attorney's Office, Middle District of Tennessee\n",
+        "\n",
+        "## Step 3: Plot data based on scraped data\n",
+        "\n",
+        "### 1. Plot the number of enforcement actions over time (PARTNER 2)\n"
+      ],
+      "id": "3d76ece4"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# filtering down to just the state agency enforcement actions\n",
+        "filtered_2021_state_agencies = df2021[df2021[\"Agency\"].str.startswith(\"State of\", na=False)]\n",
+        "\n",
+        "# aggregating by month and year\n",
+        "filtered_2021_state_agencies[\"Date\"] = pd.to_datetime(filtered_2021_state_agencies[\"Date\"])\n",
+        "\n",
+        "filtered_2021_state_agencies[\"Year\"] = filtered_2021_state_agencies[\"Date\"].dt.year\n",
+        "filtered_2021_state_agencies[\"Month\"] = filtered_2021_state_agencies[\"Date\"].dt.month\n",
+        "\n",
+        "filtered_2021_state_agencies_aggregate = (\n",
+        "    filtered_2021_state_agencies\n",
+        "    .groupby([\"Year\", \"Month\"])\n",
+        "    .size()\n",
+        "    .reset_index(name=\"Enforcement_Actions_Count\")\n",
+        ")\n",
+        "\n",
+        "filtered_2021_state_agencies_aggregate[\"Date\"] = pd.to_datetime(\n",
+        "    filtered_2021_state_agencies_aggregate[[\"Year\", \"Month\"]].assign(Day=1)\n",
+        ")\n",
+        "\n",
+        "# making the line plot\n",
+        "line_chart_2021_state_agencies = alt.Chart(filtered_2021_state_agencies_aggregate).mark_line(\n",
+        "    color=\"hotpink\",\n",
+        "    strokeWidth=2\n",
+        ").encode(\n",
+        "    x=alt.X(\"Date:T\", title=\"Date\"),\n",
+        "    y=alt.Y(\"Enforcement_Actions_Count:Q\", title=\"Number of Enforcement Actions\")\n",
+        ").properties(\n",
+        "    title=\"Monthly State Agency Enforcement Actions Since January 2021\",\n",
+        "    width=600,\n",
+        "    height=400\n",
+        ")\n",
+        "\n",
+        "line_chart_2021_state_agencies"
+      ],
+      "id": "9ae43b65",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 2. Plot the number of enforcement actions categorized: (PARTNER 1)\n",
+        "\n",
+        "* based on \"Criminal and Civil Actions\" vs. \"State Enforcement Agencies\""
+      ],
+      "id": "f1537139"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# make sure date is in the right format for the plots\n",
+        "df2021['Date'] = pd.to_datetime(df2021['Date'])\n",
+        "df2021['Year-Month'] = df2021['Date'].dt.to_period('M').dt.to_timestamp()"
+      ],
+      "id": "29a946cb",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# filter to relevant categories and make a new df that has the counts for each category\n",
+        "filtered_df = df2021[df2021['Category'].isin(['Criminal and Civil Actions', 'State Enforcement Agencies'])]\n",
+        "category_counts = filtered_df.groupby(['Year-Month', 'Category']).size().reset_index(name='Count')"
+      ],
+      "id": "09a601f8",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# make the plot\n",
+        "alt.Chart(category_counts).mark_line().encode(\n",
+        "    x=alt.X('Year-Month:T', \n",
+        "            title='Month', \n",
+        "            axis=alt.Axis(\n",
+        "                format='%b %Y',  \n",
+        "                tickCount=12,  \n",
+        "                labelAngle=-45, \n",
+        "                tickSize=5      \n",
+        "            )),\n",
+        "    y=alt.Y('Count:Q', title='Number of Enforcement Actions'),\n",
+        "    color=alt.Color('Category:N', title='Category'),\n",
+        ").properties(\n",
+        "    title='Total Enforcement Actions Over Time: Criminal and Civil Actions vs. State Enforcement Agencies',\n",
+        "    width = 600\n",
+        ")"
+      ],
+      "id": "58538e48",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "* based on five topics"
+      ],
+      "id": "c07f4ac3"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "import re\n",
+        "\n",
+        "# filter to only enforcement actions within the category crimial and civil actions\n",
+        "filtered_df2 = df2021.loc[df2021['Category'] == 'Criminal and Civil Actions']\n",
+        "\n",
+        "# function to search for keywords and form categories\n",
+        "def classify_topic(title):\n",
+        "    if re.search(r'health|medical|healthcare|doctor|physicians?|care|medicare|medicaid|dentists?|dental|hospitals?|clinics?|dentists?|insurance', title, re.IGNORECASE):\n",
+        "        return 'Health Care Fraud'\n",
+        "    \n",
+        "    elif re.search(r'financial|investments?|money|laundering|business|tax|schemes?|fraudulent', title, re.IGNORECASE):\n",
+        "        return 'Financial Fraud'\n",
+        "    \n",
+        "    elif re.search(r'drugs?|enforcement|narcotics?|trafficking|abuse|medications?|controlled.*substances?|prescriptions?|pills?', title, re.IGNORECASE):\n",
+        "        return 'Drug Enforcement'\n",
+        "    \n",
+        "    elif re.search(r'bribery|corruption|kickback|payments?|payoffs?|illegal.*government', title, re.IGNORECASE):\n",
+        "        return 'Bribery/Corruption'\n",
+        "    \n",
+        "    else:\n",
+        "        return 'Other'\n",
+        "\n",
+        "filtered_df2['Topic'] = filtered_df2.apply(lambda x: classify_topic(x['Title']), axis=1)"
+      ],
+      "id": "d5e21df5",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# new df to group by topics and counts\n",
+        "topics_counts = filtered_df2[df2021['Category'] == 'Criminal and Civil Actions'].groupby(['Year-Month', 'Topic']).size().reset_index(name='Count')"
+      ],
+      "id": "dda9498d",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# make the plot\n",
+        "alt.Chart(topics_counts).mark_line().encode(\n",
+        "    x=alt.X('Year-Month:T', title='Month', \n",
+        "            axis=alt.Axis(\n",
+        "                format='%b %Y',  \n",
+        "                tickCount=12,  \n",
+        "                labelAngle=-45, \n",
+        "                tickSize=5      \n",
+        "            )),\n",
+        "    y=alt.Y('Count:Q', title='Number of Enforcement Actions'),\n",
+        "    color=alt.Color('Topic:N', title='Topic'),\n",
+        ").properties(\n",
+        "    title='Enforcement Actions by Topic in Criminal and Civil Actions',\n",
+        "    width=800 \n",
+        ")"
+      ],
+      "id": "6c164dc9",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Source: https://pynative.com/python-regex-search/\n",
+        "\n",
+        "## Step 4: Create maps of enforcement activity\n",
+        "\n",
+        "### 1. Map by State (PARTNER 1)\n"
+      ],
+      "id": "6abd9406"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "import geopandas as gpd\n",
+        "import matplotlib.pyplot as plt\n",
+        "import numpy as np\n",
+        "\n",
+        "states_gdf = gpd.read_file(\"data/cb_2018_us_state_5m/cb_2018_us_state_5m.shp\")"
+      ],
+      "id": "2183e71b",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Extract state names from the Agency column\n",
+        "def extract_state(agency):\n",
+        "    if isinstance(agency, str): \n",
+        "        match = re.search(r'(?:State) of([A-Za-z\\s]+)', agency)\n",
+        "        return match.group(1).strip() if match else None\n",
+        "    return None\n",
+        "\n",
+        "# Create a new column with extracted state names\n",
+        "df2021['State'] = df2021['Agency'].apply(extract_state)\n",
+        "\n",
+        "# Filter out rows where 'State' is missing\n",
+        "df2021_filtered = df2021.dropna(subset=['State'])"
+      ],
+      "id": "9a83580f",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Group by state and count enforcement actions\n",
+        "actions_by_state = df2021_filtered.groupby('State').size().reset_index(name='Enforcement Actions')\n",
+        "\n",
+        "# Make sure column names match\n",
+        "actions_by_state = actions_by_state.rename(columns={\"State\": \"NAME\"})"
+      ],
+      "id": "e7fd6098",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "# Merge the data\n",
+        "states_gdf = states_gdf.merge(actions_by_state, on='NAME', how='left')\n",
+        "\n",
+        "# Filter out non-continental US States\n",
+        "states_gdf = states_gdf[~states_gdf['NAME'].isin(['Alaska', 'Hawaii', 'Puerto Rico', 'American Samoa', 'United States Virgin Islands', 'Guam', 'Commonwealth of the Northern Mariana Islands'])]"
+      ],
+      "id": "db1a2d12",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fig, ax = plt.subplots(figsize=(12, 8))\n",
+        "states_gdf.plot(column='Enforcement Actions', cmap='OrRd',\n",
+        "                linewidth=0.1, edgecolor='0.8', legend=True, ax=ax)\n",
+        "\n",
+        "states_gdf.boundary.plot(ax=ax, color='black', linewidth=0.8, alpha=0.7)\n",
+        "\n",
+        "ax.set_title(\"Number of Enforcement Actions by State\", fontsize=16)\n",
+        "ax.axis('off')\n",
+        "\n",
+        "plt.tight_layout()\n",
+        "plt.show()"
+      ],
+      "id": "90a3d59f",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 2. Map by District (PARTNER 2)\n"
+      ],
+      "id": "908d868d"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "district_data_2021 = df2021[df2021[\"Agency\"].str.contains(\"District\", case=False, na=False)]\n",
+        "\n",
+        "district_data_2021[\"Cleaned_District\"] = (\n",
+        "    district_data_2021[\"Agency\"]\n",
+        "    .str.replace(r\"U\\.?S\\.?\\s+District\\s+|Office of the|District of\", \"\", regex=True)\n",
+        "    .str.strip()\n",
+        ")\n",
+        "\n",
+        "district_counts = district_data_2021.groupby(\"Cleaned_District\").size().reset_index(name=\"Enforcement_Count\")\n",
+        "\n",
+        "district_shapefile = \n",
+        "\n",
+        "merged_data = district_shapefile.merge(district_counts, left_on=\"Judicial_District\", right_on=\"Cleaned_District\", how=\"left\")\n",
+        "\n",
+        "fig, ax = plt.subplots(1, 1, figsize=(12, 8))\n",
+        "merged_data.plot(\n",
+        "    column=\"Enforcement_Count\",\n",
+        "    cmap=\"OrRd\",\n",
+        "    linewidth=0.8,\n",
+        "    edgecolor=\"0.8\",\n",
+        "    legend=True,\n",
+        "    ax=ax\n",
+        ")\n",
+        "ax.set_title(\"Enforcement Actions by US Attorney District (2021)\")\n",
+        "plt.show()"
+      ],
+      "id": "3e27704d",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Extra Credit\n",
+        "\n",
+        "### 1. Merge zip code shapefile with population"
+      ],
+      "id": "3872849d"
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 2. Conduct spatial join"
+      ],
+      "id": "d09c159c"
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### 3. Map the action ratio in each district"
+      ],
+      "id": "8e8633fd"
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "name": "python3",
+      "language": "python",
+      "display_name": "Python 3 (ipykernel)",
+      "path": "/Users/saravanvalkenburgh/Library/Python/3.9/share/jupyter/kernels/python3"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
+}

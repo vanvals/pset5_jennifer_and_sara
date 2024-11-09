@@ -381,25 +381,150 @@ line_chart_2021_state_agencies
 ### 2. Plot the number of enforcement actions categorized: (PARTNER 1)
 
 * based on "Criminal and Civil Actions" vs. "State Enforcement Agencies"
+```{python}
+# make sure date is in the right format for the plots
+df2021['Date'] = pd.to_datetime(df2021['Date'])
+df2021['Year-Month'] = df2021['Date'].dt.to_period('M').dt.to_timestamp()
+```
 
 ```{python}
+# filter to relevant categories and make a new df that has the counts for each category
+filtered_df = df2021[df2021['Category'].isin(['Criminal and Civil Actions', 'State Enforcement Agencies'])]
+category_counts = filtered_df.groupby(['Year-Month', 'Category']).size().reset_index(name='Count')
+```
 
+```{python}
+# make the plot
+alt.Chart(category_counts).mark_line().encode(
+    x=alt.X('Year-Month:T', 
+            title='Month', 
+            axis=alt.Axis(
+                format='%b %Y',  
+                tickCount=12,  
+                labelAngle=-45, 
+                tickSize=5      
+            )),
+    y=alt.Y('Count:Q', title='Number of Enforcement Actions'),
+    color=alt.Color('Category:N', title='Category'),
+).properties(
+    title='Total Enforcement Actions Over Time: Criminal and Civil Actions vs. State Enforcement Agencies',
+    width = 600
+)
 ```
 
 * based on five topics
+```{python}
+import re
+
+# filter to only enforcement actions within the category crimial and civil actions
+filtered_df2 = df2021.loc[df2021['Category'] == 'Criminal and Civil Actions']
+
+# function to search for keywords and form categories
+def classify_topic(title):
+    if re.search(r'health|medical|healthcare|doctor|physicians?|care|medicare|medicaid|dentists?|dental|hospitals?|clinics?|dentists?|insurance', title, re.IGNORECASE):
+        return 'Health Care Fraud'
+    
+    elif re.search(r'financial|investments?|money|laundering|business|tax|schemes?|fraudulent', title, re.IGNORECASE):
+        return 'Financial Fraud'
+    
+    elif re.search(r'drugs?|enforcement|narcotics?|trafficking|abuse|medications?|controlled.*substances?|prescriptions?|pills?', title, re.IGNORECASE):
+        return 'Drug Enforcement'
+    
+    elif re.search(r'bribery|corruption|kickback|payments?|payoffs?|illegal.*government', title, re.IGNORECASE):
+        return 'Bribery/Corruption'
+    
+    else:
+        return 'Other'
+
+filtered_df2['Topic'] = filtered_df2.apply(lambda x: classify_topic(x['Title']), axis=1)
+```
 
 ```{python}
-
+# new df to group by topics and counts
+topics_counts = filtered_df2[df2021['Category'] == 'Criminal and Civil Actions'].groupby(['Year-Month', 'Topic']).size().reset_index(name='Count')
 ```
+
+```{python}
+# make the plot
+alt.Chart(topics_counts).mark_line().encode(
+    x=alt.X('Year-Month:T', title='Month', 
+            axis=alt.Axis(
+                format='%b %Y',  
+                tickCount=12,  
+                labelAngle=-45, 
+                tickSize=5      
+            )),
+    y=alt.Y('Count:Q', title='Number of Enforcement Actions'),
+    color=alt.Color('Topic:N', title='Topic'),
+).properties(
+    title='Enforcement Actions by Topic in Criminal and Civil Actions',
+    width=800 
+)
+```
+
+Source: https://pynative.com/python-regex-search/
 
 ## Step 4: Create maps of enforcement activity
 
 ### 1. Map by State (PARTNER 1)
 
 ```{python}
-
+import geopandas as gpd
 import matplotlib.pyplot as plt
+import numpy as np
 
+states_gdf = gpd.read_file("data/cb_2018_us_state_5m/cb_2018_us_state_5m.shp")
+```
+
+```{python}
+# Extract state names from the Agency column
+def extract_state(agency):
+    if isinstance(agency, str): 
+        match = re.search(r'(?:State) of([A-Za-z\s]+)', agency)
+        return match.group(1).strip() if match else None
+    return None
+
+# Create a new column with extracted state names
+df2021['State'] = df2021['Agency'].apply(extract_state)
+
+# Filter out rows where 'State' is missing
+df2021_filtered = df2021.dropna(subset=['State'])
+```
+
+```{python}
+# Group by state and count enforcement actions
+actions_by_state = df2021_filtered.groupby('State').size().reset_index(name='Enforcement Actions')
+
+# Make sure column names match
+actions_by_state = actions_by_state.rename(columns={"State": "NAME"})
+```
+
+```{python}
+# Merge the data
+states_gdf = states_gdf.merge(actions_by_state, on='NAME', how='left')
+
+# Filter out non-continental US States
+states_gdf = states_gdf[~states_gdf['NAME'].isin(['Alaska', 'Hawaii', 'Puerto Rico', 'American Samoa', 'United States Virgin Islands', 'Guam', 'Commonwealth of the Northern Mariana Islands'])]
+
+```
+
+```{python}
+fig, ax = plt.subplots(figsize=(12, 8))
+states_gdf.plot(column='Enforcement Actions', cmap='OrRd',
+                linewidth=0.1, edgecolor='0.8', legend=True, ax=ax)
+
+states_gdf.boundary.plot(ax=ax, color='black', linewidth=0.8, alpha=0.7)
+
+ax.set_title("Number of Enforcement Actions by State", fontsize=16)
+ax.axis('off')
+
+plt.tight_layout()
+plt.show()
+```
+
+### 2. Map by District (PARTNER 2)
+
+```{python}
 district_data_2021 = df2021[df2021["Agency"].str.contains("District", case=False, na=False)]
 
 district_data_2021["Cleaned_District"] = (
@@ -425,13 +550,6 @@ merged_data.plot(
 )
 ax.set_title("Enforcement Actions by US Attorney District (2021)")
 plt.show()
-```
-
-
-### 2. Map by District (PARTNER 2)
-
-```{python}
-
 ```
 
 ## Extra Credit
