@@ -342,6 +342,40 @@ Date and details of the earliest enforcement action scraped: The United States A
 
 ```{python}
 
+# filtering down to just the state agency enforcement actions
+filtered_2021_state_agencies = df2021[df2021["Agency"].str.startswith("State of", na=False)]
+
+# aggregating by month and year
+filtered_2021_state_agencies["Date"] = pd.to_datetime(filtered_2021_state_agencies["Date"])
+
+filtered_2021_state_agencies["Year"] = filtered_2021_state_agencies["Date"].dt.year
+filtered_2021_state_agencies["Month"] = filtered_2021_state_agencies["Date"].dt.month
+
+filtered_2021_state_agencies_aggregate = (
+    filtered_2021_state_agencies
+    .groupby(["Year", "Month"])
+    .size()
+    .reset_index(name="Enforcement_Actions_Count")
+)
+
+filtered_2021_state_agencies_aggregate["Date"] = pd.to_datetime(
+    filtered_2021_state_agencies_aggregate[["Year", "Month"]].assign(Day=1)
+)
+
+# making the line plot
+line_chart_2021_state_agencies = alt.Chart(filtered_2021_state_agencies_aggregate).mark_line(
+    color="hotpink",
+    strokeWidth=2
+).encode(
+    x=alt.X("Date:T", title="Date"),
+    y=alt.Y("Enforcement_Actions_Count:Q", title="Number of Enforcement Actions")
+).properties(
+    title="Monthly State Agency Enforcement Actions Since January 2021",
+    width=600,
+    height=400
+)
+
+line_chart_2021_state_agencies
 ```
 
 ### 2. Plot the number of enforcement actions categorized: (PARTNER 1)
@@ -364,6 +398,33 @@ Date and details of the earliest enforcement action scraped: The United States A
 
 ```{python}
 
+import matplotlib.pyplot as plt
+
+district_data_2021 = df2021[df2021["Agency"].str.contains("District", case=False, na=False)]
+
+district_data_2021["Cleaned_District"] = (
+    district_data_2021["Agency"]
+    .str.replace(r"U\.?S\.?\s+District\s+|Office of the|District of", "", regex=True)
+    .str.strip()
+)
+
+district_counts = district_data_2021.groupby("Cleaned_District").size().reset_index(name="Enforcement_Count")
+
+district_shapefile = 
+
+merged_data = district_shapefile.merge(district_counts, left_on="Judicial_District", right_on="Cleaned_District", how="left")
+
+fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+merged_data.plot(
+    column="Enforcement_Count",
+    cmap="OrRd",
+    linewidth=0.8,
+    edgecolor="0.8",
+    legend=True,
+    ax=ax
+)
+ax.set_title("Enforcement Actions by US Attorney District (2021)")
+plt.show()
 ```
 
 
